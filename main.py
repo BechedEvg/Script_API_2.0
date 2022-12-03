@@ -16,7 +16,7 @@ class DriverChrome:
     def __init__(self):
         self.driver = None
         self.options = webdriver.ChromeOptions()
-        #self.options.add_argument('headless')
+        self.options.add_argument('headless')
         self.options.add_argument("start-maximized")
         self.options.add_argument('--disable-blink-features=AutomationControlled')
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
