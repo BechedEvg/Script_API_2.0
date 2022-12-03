@@ -253,7 +253,7 @@ class AnalysisPage:
         result = {"empty": "no", "duplicate": "no"}
         list_alt = self.result_check_page["page_content"]["images_alt"]["list_atl"]
         amount_img = self.result_check_page["page_content"]["images_alt"]["img_amount"]
-        if len(list_alt) != amount_img:
+        if len(list_alt) != amount_img or "" in list_alt:
             result["empty"] = "yes"
         if len(set(list_alt)) != amount_img:
             result["duplicate"] = "yes"
