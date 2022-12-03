@@ -100,7 +100,6 @@ class GetHtml:
         self.browser.open_browser()
         self.browser.driver.get(url)
         html = self.browser.driver.page_source
-        sleep(999)
         self.browser.close_browser()
         return html
 
