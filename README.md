@@ -7,7 +7,7 @@ An example of running a script:
 >  python3 main.py "https://avtology.com/cars"
 
 Run script with user agent:
->  python3 main.py "https://avtology.com/cars" "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/62.0 "
+>  python3 main.py "https://avtology.com/cars"  "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/62.0"
 
 The output of the script is three files:
 1. result_check_google.json
