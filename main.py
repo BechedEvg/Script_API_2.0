@@ -5,6 +5,7 @@ from selenium_stealth import stealth
 from usp.tree  import sitemap_tree_for_homepage
 import cloudscraper
 import os
+import sys
 import re
 import json
 from time import sleep
@@ -15,7 +16,7 @@ class DriverChrome:
     def __init__(self):
         self.driver = None
         self.options = webdriver.ChromeOptions()
-        self.options.add_argument('headless')
+        #self.options.add_argument('headless')
         self.options.add_argument("start-maximized")
         self.options.add_argument('--disable-blink-features=AutomationControlled')
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -93,17 +94,23 @@ class GetHtml:
         except:
             return "no_connection"
 
-    def get_webdriver_html(self, url):
+    def get_webdriver_html(self, url, user_agent="default"):
+        if user_agent != "default":
+            self.browser.options.add_argument(f"user-agent={user_agent}")
         self.browser.open_browser()
         self.browser.driver.get(url)
         html = self.browser.driver.page_source
+        sleep(999)
         self.browser.close_browser()
         return html
 
     # get page html from mobile emulation
-    def get_webdriver_mobile_html(self, url):
-        self.browser.options.add_argument(
-            "user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, likeGecko) Version/10.0 Mobile/14E304 Safari/602.1")
+    def get_webdriver_mobile_html(self, url, user_agent="default"):
+        if user_agent == "default":
+            self.browser.options.add_argument(
+                "user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, likeGecko) Version/10.0 Mobile/14E304 Safari/602.1")
+        else:
+            self.browser.options.add_argument(f"user-agent={user_agent}")
         mobileEmulation = {'deviceName': 'iPhone 8'}
         self.browser.options.add_experimental_option('mobileEmulation', mobileEmulation)
         self.browser.open_browser()
@@ -212,6 +219,7 @@ class ScrapingPage:
 
 
 class AnalysisPage:
+
     def __init__(self, result_check_google, result_check_page):
         self.result_check_google = result_check_google
         self.result_check_page = result_check_page
@@ -270,6 +278,37 @@ class AnalysisPage:
         return result_list
 
 
+class Sitemap:
+
+    def __init__(self, url):
+        self.url = ParsingUrl(url).get_main_url()
+
+    def check_sitemap(self):
+        sitemap = self.url + "/sitemap.xml"
+        if GetHtml.get_url(sitemap).status_code == 200:
+            return sitemap
+
+        sitemap = self.url + "/robots.txt"
+        if GetHtml.get_url(sitemap).status_code == 200:
+            try:
+                sitemap = GetHtml.get_url(sitemap).text.split("\n")
+                for line in sitemap:
+                    line = line.split()
+                    if line[0].lower() == "sitemap:" and ParsingUrl(self.url).comparison_domain(line[1]):
+                        return sitemap
+            except:
+                pass
+
+        return "not_found"
+
+    def get_url_list_in_sitemap(self):
+        list_page = []
+        for page in sitemap_tree_for_homepage(self.check_sitemap()).all_pages():
+            if page.url not in list_page:
+                list_page.append(page.url)
+        return list_page
+
+
 # check index pages in search
 def check_index_pages(html, url, device="desktop"):
     parser = BeautifulSoup(html, "lxml")
@@ -283,38 +322,6 @@ def check_index_pages(html, url, device="desktop"):
         if page_url == url:
             return "yes"
     return "no"
-
-
-def get_dict_google_check(url):
-    url_search = ParsingUrl(url).get_url_without_http()
-    url_search = f"https://www.google.com/search?q=site:{url_search}"
-    page_source_mobile = GetHtml().get_webdriver_mobile_html(url_search)
-    check_index_mobile = check_index_pages(page_source_mobile, url, device="mobile")
-    page_source_desktop = GetHtml().get_webdriver_html(url_search)
-    check_index_desktop = check_index_pages(page_source_desktop, url)
-    dict_page = {"google_index_desktop": check_index_desktop, "google_index_mobile": check_index_mobile}
-
-    if check_index_mobile == "yes":
-        parser = BeautifulSoup(page_source_mobile, "lxml")
-        url_source = parser.find(class_="MjjYud")
-        title = url_source .find(class_="oewGkc LeUQr MUxGbd v0nnCb").text
-        description = url_source .find(class_=re.compile("VwiC3b MUxGbd yDYNvb")).text.replace(u'\xa0', u' ')
-        dict_page["google_index_mobile"] = check_index_mobile
-        dict_page["title"] = title
-        dict_page["description"] = description
-        dict_page["len_title_mobile"] = len(title)
-        dict_page["len_description_mobile"] = len(description)
-        return dict_page
-    return dict_page
-
-
-#обьеденить в один класс sitemap
-def get_url_list_in_sitemap(sitemap):
-    list_page = []
-    for page in sitemap_tree_for_homepage(sitemap).all_pages():
-        if page.url not in list_page:
-            list_page.append(page.url)
-    return list_page ##
 
 
 def check_robots(url):
@@ -345,14 +352,42 @@ def check_robots(url):
     return robot_check
 
 
-def get_result_dict(base_status_code, sitemap, url):
+def get_dict_google_check(url, user_agent_desktop):
+    url_search = ParsingUrl(url).get_url_without_http()
+    url_search = f"https://www.google.com/search?q=site:{url_search}"
+
+    page_source_mobile = GetHtml().get_webdriver_mobile_html(url_search)
+    check_index_mobile = check_index_pages(page_source_mobile, url, device="mobile")
+
+    page_source_desktop = GetHtml().get_webdriver_html(url_search, user_agent_desktop)
+    check_index_desktop = check_index_pages(page_source_desktop, url)
+
+    dict_page = {"google_index_desktop": check_index_desktop, "google_index_mobile": check_index_mobile}
+
+    if check_index_mobile == "yes":
+        parser = BeautifulSoup(page_source_mobile, "lxml")
+        url_source = parser.find(class_="MjjYud")
+        title = url_source .find(class_="oewGkc LeUQr MUxGbd v0nnCb").text
+        description = url_source .find(class_=re.compile("VwiC3b MUxGbd yDYNvb")).text.replace(u'\xa0', u' ')
+        dict_page["google_index_mobile"] = check_index_mobile
+        dict_page["title"] = title
+        dict_page["description"] = description
+        dict_page["len_title_mobile"] = len(title)
+        dict_page["len_description_mobile"] = len(description)
+        return dict_page
+    return dict_page
+
+
+def get_check_page_result_dict(base_status_code, url):
     robots = check_robots(url)
+    sitemap = Sitemap(url)
+    sitemap_url  = sitemap.check_sitemap()
     result_dict = {"status_code": base_status_code,
                    "robots": robots,
                    "check_url_in_sitemap": "no"
                    }
-    if sitemap != "not_found":
-        page_site_sitemap = get_url_list_in_sitemap(sitemap)
+    if sitemap_url != "not_found":
+        page_site_sitemap = sitemap.get_url_list_in_sitemap()
         if url in page_site_sitemap:
             result_dict["check_url_in_sitemap"] = "yes"
     else:
@@ -372,33 +407,13 @@ def get_result_dict(base_status_code, sitemap, url):
         }
     return result_dict
 
-#обьеденить в один класс sitemap
-def check_sitemap(main_url):
-    sitemap = main_url + "/sitemap.xml"
-    if GetHtml.get_url(sitemap).status_code == 200:
-        return sitemap
-
-    sitemap = main_url + "/robots.txt"
-    if GetHtml.get_url(sitemap).status_code == 200:
-        try:
-            sitemap = GetHtml.get_url(sitemap).text.split("\n")
-            for line in sitemap:
-                line = line.split()
-                if line[0].lower() == "sitemap:" and ParsingUrl(main_url).comparison_domain(line[1]):
-                    return sitemap
-        except:
-            pass
-
-    return "not_found"
-
 
 # site check main function
-def check_page(main_url, url):
+def check_page(url):
     base_status_code = GetHtml.get_url(url)
     if base_status_code != "no_connection":
         base_status_code = base_status_code.status_code
-        sitemap = check_sitemap(main_url)
-        result_dict = get_result_dict(base_status_code, sitemap, url)
+        result_dict = get_check_page_result_dict(base_status_code, url)
         return result_dict
     return "no_connection"
 
@@ -423,10 +438,12 @@ def get_result_analysis_dict(google_dict, check_site_dict, url):
 
 
 def main():
-    url = "https://animego.org/anime/nezhnyy-ukus-m2181"
-    main_url = ParsingUrl(url).get_main_url()
-    result_check_google = get_dict_google_check(url)
-    result_check_page = check_page(main_url, url)
+    url = sys.argv[1]
+    user_agent_desktop = "default"
+    if len(sys.argv) == 3:
+        user_agent_desktop = " ".join(sys.argv[2:])
+    result_check_google = get_dict_google_check(url, user_agent_desktop)
+    result_check_page = check_page(url)
     result_analysis = get_result_analysis_dict(result_check_google, result_check_page, url)
     JsonRW().json_write("result_check_google", result_check_google)
     JsonRW().json_write("result_check_page", result_check_page)
@@ -435,5 +452,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    #page_site_google_result = list(JsonRW().json_read("google_result")["dict_page"])
-    #print(page_site_google_result)
