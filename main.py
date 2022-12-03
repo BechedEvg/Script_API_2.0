@@ -271,9 +271,13 @@ class AnalysisPage:
         result_list = []
         external_link = self.result_check_page["page_content"]["external_link"]
         for page in external_link:
-            status_cod = GetHtml.get_url(page).status_code
-            if status_cod != 200:
-                result_list += page
+            get_url = GetHtml.get_url(page)
+            if get_url != "no_connection":
+                status_cod =  get_url.status_code
+                if status_cod != 200:
+                    result_list.append(page)
+            else:
+                result_list.append(page)
         return result_list
 
 
@@ -284,19 +288,23 @@ class Sitemap:
 
     def check_sitemap(self):
         sitemap = self.url + "/sitemap.xml"
-        if GetHtml.get_url(sitemap).status_code == 200:
-            return sitemap
+        sitemap_check = GetHtml.get_url(sitemap)
+        if sitemap_check != "no_connection":
+            if sitemap_check.status_code == 200:
+                return sitemap
 
         sitemap = self.url + "/robots.txt"
-        if GetHtml.get_url(sitemap).status_code == 200:
-            try:
-                sitemap = GetHtml.get_url(sitemap).text.split("\n")
-                for line in sitemap:
-                    line = line.split()
-                    if line[0].lower() == "sitemap:" and ParsingUrl(self.url).comparison_domain(line[1]):
-                        return sitemap
-            except:
-                pass
+        robot_check = GetHtml.get_url(sitemap)
+        if robot_check != "no_connection":
+            if robot_check.status_code == 200:
+                try:
+                    sitemap = robot_check.text.split("\n")
+                    for line in sitemap:
+                        line = line.split()
+                        if line[0].lower() == "sitemap:" and ParsingUrl(self.url).comparison_domain(line[1]):
+                            return sitemap
+                except:
+                    pass
 
         return "not_found"
 
@@ -329,24 +337,24 @@ def check_robots(url):
     url_path = "/" + url.get_path_url()
     patch_robot = url.get_main_url() + "/robots.txt"
     page_robot = GetHtml.get_url(patch_robot)
-
-    if page_robot.status_code == 200:
-        page_robot = page_robot.text.split("\n")
-        for line in page_robot:
-            try:
-                line = line.split()
-                if line[0].lower() == "sitemap:" and url.comparison_domain(line[1]):
-                    robot_check["url_sitemap"] = "found"
-            except:
-                pass
-        for line in page_robot:
-            try:
-                line = line.split()
-                if line[0].lower() == "disallow:" and \
-                        (line[1].lower() == url_path or line[1].lower() == url_path + "/"):
-                    robot_check["allow_url"] = "no"
-            except:
-                pass
+    if page_robot != "no_connection":
+        if page_robot.status_code == 200:
+            page_robot = page_robot.text.split("\n")
+            for line in page_robot:
+                try:
+                    line = line.split()
+                    if line[0].lower() == "sitemap:" and url.comparison_domain(line[1]):
+                        robot_check["url_sitemap"] = "found"
+                except:
+                    pass
+            for line in page_robot:
+                try:
+                    line = line.split()
+                    if line[0].lower() == "disallow:" and \
+                            (line[1].lower() == url_path or line[1].lower() == url_path + "/"):
+                        robot_check["allow_url"] = "no"
+                except:
+                    pass
 
     return robot_check
 
