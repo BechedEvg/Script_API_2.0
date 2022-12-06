@@ -175,10 +175,7 @@ class ScrapingPage:
             if h not in dict_tag["list_tag"]:
                 dict_tag["list_tag"].append(h)
 
-        if len(dict_tag["list_tag"]) != 0:
-            return dict_tag
-        else:
-            return "not_found"
+        return dict_tag
 
     # get list of img tags
     def check_alt_img(self):
