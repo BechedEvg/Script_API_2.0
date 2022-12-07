@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium_stealth import stealth
-from usp.tree  import sitemap_tree_for_homepage
+from usp.tree import sitemap_tree_for_homepage
 import cloudscraper
 import os
 import sys
@@ -74,11 +74,11 @@ class ScrapingHead:
 class JsonRW:
 
     def json_write(self, name, in_dict):
-        with open(f'{name}.json', 'w') as outfile:
+        with open(f'{name}.json', 'w', encoding="utf-8") as outfile:
             json.dump(in_dict, outfile, indent=4, ensure_ascii=False)
 
     def json_read(self, name):
-        with open(f'{name}.json', 'r') as infile:
+        with open(f'{name}.json', 'r', encoding="utf-8") as infile:
             return json.load(infile)
 
 
@@ -314,16 +314,16 @@ class Sitemap:
 
 
 # check index pages in search
-def check_index_pages(html, url, device="desktop"):
+def check_index_pages(html, device="desktop"):
     parser = BeautifulSoup(html, "lxml")
     page_source = parser.find(class_="MjjYud")
     if page_source and device == "desktop":
         page_url = page_source.find(class_="yuRUbf").find("a")["href"]
-        if page_url == url:
+        if page_url:
             return "yes"
     elif page_source and device == "mobile":
         page_url = page_source.find(class_="cz3goc BmP5tf")["href"]
-        if page_url == url:
+        if page_url:
             return "yes"
     return "no"
 
@@ -361,10 +361,10 @@ def get_dict_google_check(url, user_agent_desktop):
     url_search = f"https://www.google.com/search?q=site:{url_search}"
 
     page_source_mobile = GetHtml().get_webdriver_mobile_html(url_search)
-    check_index_mobile = check_index_pages(page_source_mobile, url, device="mobile")
+    check_index_mobile = check_index_pages(page_source_mobile, device="mobile")
 
     page_source_desktop = GetHtml().get_webdriver_html(url_search, user_agent_desktop)
-    check_index_desktop = check_index_pages(page_source_desktop, url)
+    check_index_desktop = check_index_pages(page_source_desktop)
 
     dict_page = {"google_index_desktop": check_index_desktop, "google_index_mobile": check_index_mobile}
 
