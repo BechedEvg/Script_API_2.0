@@ -371,7 +371,7 @@ def get_dict_google_check(url, user_agent_desktop):
     if check_index_mobile == "yes":
         parser = BeautifulSoup(page_source_mobile, "lxml")
         url_source = parser.find(class_="MjjYud")
-        title = url_source .find(class_="oewGkc LeUQr MUxGbd v0nnCb").text
+        title = url_source .find(class_=re.compile("oewGkc LeUQr MUxGbd v0nnCb")).text
         description = url_source .find(class_=re.compile("VwiC3b MUxGbd yDYNvb")).text.replace(u'\xa0', u' ')
         dict_page["google_index_mobile"] = check_index_mobile
         dict_page["title"] = title
